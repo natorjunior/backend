@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aula 02 - Métodos HTTP, Status Codes e API REST</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/white.css" id="theme">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css">
+
+  <style>
+    :root {
+      --brand: #005cab;
+      --brand-dark: #003b6f;
+      --accent: #f58220;
+      --ok: #1f8f4e;
+      --warn: #be5c00;
+      --bg-soft: #f3f7fb;
+      --text-soft: #3d4b5c;
+    }
+
+    .reveal {
+      font-size: 30px;
+    }
+
+    .reveal h1,
+    .reveal h2,
+    .reveal h3 {
+      color: var(--brand-dark);
+      text-transform: none;
+    }
+
+    .reveal .slides section {
+      text-align: left;
+    }
+
+    .reveal .title-center,
+    .reveal .title-center * {
+      text-align: center !important;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.58em;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      margin-right: 0.4rem;
+      color: white;
+      background: var(--brand);
+      vertical-align: middle;
+    }
+
+    .tag.activity {
+      background: var(--accent);
+    }
+
+    .box {
+      background: var(--bg-soft);
+      border-left: 8px solid var(--brand);
+      border-radius: 8px;
+      padding: 0.8rem 1rem;
+      margin: 0.6rem 0;
+      color: var(--text-soft);
+      font-size: 0.88em;
+    }
+
+    .box.activity {
+      border-left-color: var(--accent);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.8rem;
+    }
+
+    .panel {
+      border: 2px solid #dbe6f3;
+      border-radius: 10px;
+      padding: 0.7rem;
+      background: #fff;
+    }
+
+    .panel h4 {
+      margin-top: 0;
+      margin-bottom: 0.4rem;
+      color: var(--brand-dark);
+    }
+
+    .small {
+      font-size: 0.75em;
+    }
+
+    .muted {
+      color: #5a6b80;
+    }
+
+    .ok { color: var(--ok); font-weight: 700; }
+    .warn { color: var(--warn); font-weight: 700; }
+
+    .visual-flow {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 0.6rem;
+      margin-top: 0.8rem;
+    }
+
+    .visual-node {
+      border: 2px solid #dbe6f3;
+      border-radius: 12px;
+      padding: 0.8rem;
+      background: #fff;
+      text-align: center;
+    }
+
+    .visual-node img {
+      width: 150px;
+      height: 95px;
+      object-fit: cover;
+      border-radius: 8px;
+      display: block;
+      margin: 0 auto 0.5rem auto;
+    }
+
+    .arrow {
+      font-size: 1.2em;
+      color: var(--brand-dark);
+      font-weight: 700;
+    }
+
+    .method-card {
+      border: 2px solid #dbe6f3;
+      border-radius: 10px;
+      padding: 0.55rem 0.7rem;
+      background: #fff;
+      min-height: 120px;
+    }
+
+    .method-card .http {
+      display: inline-block;
+      border-radius: 8px;
+      padding: 0.15rem 0.45rem;
+      color: #fff;
+      font-size: 0.55em;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+
+    .get { background: #2f8f5b; }
+    .post { background: #1565c0; }
+    .put { background: #7b1fa2; }
+    .patch { background: #ef6c00; }
+    .delete { background: #c62828; }
+    .head { background: #455a64; }
+
+    .status-family {
+      border-radius: 10px;
+      padding: 0.6rem 0.7rem;
+      color: #fff;
+      font-size: 0.72em;
+      min-height: 100px;
+    }
+
+    .s2xx { background: #1f8f4e; }
+    .s4xx { background: #be5c00; }
+    .s5xx { background: #a61d24; }
+
+    .rest-flow {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+      align-items: center;
+      gap: 0.35rem;
+      margin-top: 0.6rem;
+    }
+
+    .rest-step {
+      border: 2px solid #dbe6f3;
+      border-radius: 12px;
+      background: #fff;
+      padding: 0.55rem;
+      text-align: center;
+      font-size: 0.6em;
+      min-height: 94px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+
+    .uri-demo {
+      margin-top: 0.8rem;
+      line-height: 1.9;
+      font-size: 0.92em;
+    }
+
+    .uri-part {
+      display: inline-block;
+      padding: 0.08rem 0.35rem;
+      border-radius: 8px;
+      border: 2px solid transparent;
+      margin: 0.08rem 0.08rem;
+      background: #fff;
+      font-weight: 600;
+    }
+
+    .scheme { border-color: #e53935; }
+    .host { border-color: #1eae5c; }
+    .path { border-color: #3f51b5; }
+    .query { border-color: #f4b400; }
+
+    .api-kv {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 0.3rem 0.7rem;
+      margin-top: 0.6rem;
+      font-size: 0.78em;
+    }
+
+    .api-kv code {
+      font-size: 0.95em;
+    }
+
+    .reveal pre code {
+      max-height: 520px;
+      font-size: 0.7em;
+      line-height: 1.35;
+      border-radius: 10px;
+      padding: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+      <section class="title-center">
+        <h1>Fundamentos de Back-End</h1>
+        <h3>Aula 02 - Métodos HTTP, Status Codes e API REST</h3>
+        <p class="small muted">Prof. Msc. Nator Junior Carvalho da Costa</p>
+      </section>
+
+
+      <section>
+        <section class="title-center">
+          <h2>Sessão Inicial</h2>
+          <h3>Formato das APIs</h3>
+        </section>
+
+        <section>
+          <span class="tag">Subsessão I.1</span>
+          <h2>Recursos e URIs</h2>
+          <ul>
+            <li>Um recurso de API é identificado por uma URI (endereço do recurso).</li>
+            <li>A URI parece um endereço web, mas descreve um dado ou ação da API.</li>
+            <li>Formato base: esquema + host + caminho + (query opcional).</li>
+          </ul>
+
+          <div class="uri-demo">
+            <span class="fragment fade-in" data-fragment-index="1"><span class="uri-part scheme">protocolo</span>://</span>
+            <span class="fragment fade-in" data-fragment-index="2"><span class="uri-part host">host:porta</span>/</span>
+            <span class="fragment fade-in" data-fragment-index="3"><span class="uri-part path">caminho/do/recurso</span>?</span>
+            <span class="fragment fade-in" data-fragment-index="4"><span class="uri-part query">query=params</span></span>
+          </div>
+        </section>
+
+        <section>
+          <span class="tag">Subsessão I.2</span>
+          <h2>Exemplo de Formato</h2>
+          <div class="uri-demo">
+            <span class="fragment fade-in" data-fragment-index="1"><span class="uri-part scheme">https</span>://</span>
+            <span class="fragment fade-in" data-fragment-index="2"><span class="uri-part host">api.exemplo.com:443</span>/</span>
+            <span class="fragment fade-in" data-fragment-index="3"><span class="uri-part path">v1/alunos/310</span>?</span>
+            <span class="fragment fade-in" data-fragment-index="4"><span class="uri-part query">ativo=true</span></span>
+          </div>
+
+          <div class="api-kv">
+            <div class="fragment fade-in" data-fragment-index="5"><strong>scheme</strong></div><div class="fragment fade-in" data-fragment-index="5"><code>https</code> (protocolo)</div>
+            <div class="fragment fade-in" data-fragment-index="6"><strong>host:porta</strong></div><div class="fragment fade-in" data-fragment-index="6"><code>api.exemplo.com:443</code> (servidor)</div>
+            <div class="fragment fade-in" data-fragment-index="7"><strong>path</strong></div><div class="fragment fade-in" data-fragment-index="7"><code>/v1/alunos/310</code> (recurso)</div>
+            <div class="fragment fade-in" data-fragment-index="8"><strong>query</strong></div><div class="fragment fade-in" data-fragment-index="8"><code>?ativo=true</code> (filtros/opções)</div>
+          </div>
+        </section>
+
+        <section>
+          <span class="tag">Subsessão I.3</span>
+          <h2>API Real: Consulta de CEP (ViaCEP)</h2>
+          <div class="box fragment fade-in" data-fragment-index="1">
+            Endpoint de exemplo:<br>
+            <code>https://viacep.com.br/ws/01001000/json/</code>
+          </div>
+
+          <div class="uri-demo">
+            <span class="fragment fade-in" data-fragment-index="2"><span class="uri-part scheme">https</span>://</span>
+            <span class="fragment fade-in" data-fragment-index="3"><span class="uri-part host">viacep.com.br</span>/</span>
+            <span class="fragment fade-in" data-fragment-index="4"><span class="uri-part path">ws/01001000/json/</span></span>
+          </div>
+
+          <pre class="fragment fade-in" data-fragment-index="5"><code class="language-text" data-trim>
+Postman (VSCode) -> New HTTP Request
+Method: GET
+URL: https://viacep.com.br/ws/01001000/json/
+Send
+          </code></pre>
+
+          <pre class="fragment fade-in" data-fragment-index="6"><code class="language-json" data-trim>
+{
+  "cep": "01001-000",
+  "logradouro": "Praça da Sé",
+  "bairro": "Se",
+  "localidade": "São Paulo",
+  "uf": "SP"
+}
+          </code></pre>
+        </section>
+      </section>
+
+      <section>
+        <section class="title-center">
+          <h2>Sessão 1</h2>
+          <h3>Contexto e Setup</h3>
+        </section>
+
+        <section class="title-center">
+          <h2>Abra o VS Code</h2>
+          <p>Programação em tempo real: bate e volta.</p>
+        </section>
+
+
+        <section>
+          <span class="tag">Subsessão 1.2</span>
+          <h2>Fluxo Básico Cliente - Servidor</h2>
+          <div class="visual-flow">
+            <div class="visual-node fragment fade-in" data-fragment-index="1">
+              <img src="./imgs/web.jpg" alt="Cliente na Web">
+              <strong>Cliente</strong><br>
+              <span class="small muted">Browser, app mobile, frontend</span>
+            </div>
+            <div class="arrow fragment fade-in" data-fragment-index="2">⇄</div>
+            <div class="visual-node fragment fade-in" data-fragment-index="3">
+              <img src="./imgs/web_server.png" alt="Servidor Web">
+              <strong>Servidor / API</strong><br>
+              <span class="small muted">Recebe, processa e responde</span>
+            </div>
+          </div>
+          <div class="box fragment fade-in" data-fragment-index="4">Toda aula de hoje acontece nesse fluxo: requisição HTTP -> resposta HTTP.</div>
+        </section>
+
+        <section>
+          <span class="tag">Subsessão 1.3</span>
+          <h2>Setup Rapido do Projeto</h2>
+          <pre><code class="language-bash" data-trim>
+mkdir api-aula02
+cd api-aula02
+npm init -y
+npm install express
+          </code></pre>
+          <pre><code class="language-javascript" data-trim>
+const express = require('express');
+const app = express();
+
+app.use("/",(req, res)=>{
+    res.send("Deu certo")
+});
+
+app.listen(3000, () => {
+  console.log('API em http://localhost:3000');
+});
+          </code></pre>
+        </section>
+      </section>
+
+      <section>
+        <section class="title-center">
+          <h2>Sessão 2</h2>
+          <h3>Métodos HTTP</h3>
+        </section>
+
+        <section>
+          <span class="tag">Subsessão 2.1</span>
+          <h2>Métodos HTTP: Quando Usar</h2>
+          <ul>
+            <li class="fragment fade-in" data-fragment-index="1"><strong>GET</strong>: buscar recurso(s), sem alterar dados.</li>
+            <li class="fragment fade-in" data-fragment-index="2"><strong>POST</strong>: criar novo recurso.</li>
+            <li class="fragment fade-in" data-fragment-index="3"><strong>PUT</strong>: substituir um recurso completo.</li>
+            <li class="fragment fade-in" data-fragment-index="4"><strong>PATCH</strong>: atualizar parte do recurso.</li>
+            <li class="fragment fade-in" data-fragment-index="5"><strong>DELETE</strong>: remover recurso.</li>
+          </ul>
+          <div class="box fragment fade-in" data-fragment-index="6">
+            Regra de ouro: o verbo HTTP precisa combinar com a intenção da rota.
+          </div>
+          <div class="box activity fragment fade-in" data-fragment-index="7">
+            Evite: <code>POST /deletarTarefa</code>.<br>
+            Prefira: <code>DELETE /tarefas/:id</code>.
+          </div>
+        </section>
+
+        <section>
+          <span class="tag">Subsessão 2.2</span>
+          <h2>Mapa Visual dos Métodos</h2>
+          <div class="grid-3">
+            <div class="method-card fragment fade-in" data-fragment-index="1">
+              <span class="http get">GET</span>
+              <div><strong>Ler</strong></div>
+              <div class="small muted">Não altera estado</div>
+            </div>
+            <div class="method-card fragment fade-in" data-fragment-index="2">
+              <span class="http post">POST</span>
+              <div><strong>Criar</strong></div>
+              <div class="small muted">Gera novo recurso</div>
+            </div>
+            <div class="method-card fragment fade-in" data-fragment-index="3">
+              <span class="http put">PUT</span>
+              <div><strong>Substituir</strong></div>
+              <div class="small muted">Atualização completa</div>
+            </div>
+            <div class="method-card fragment fade-in" data-fragment-index="4">
+              <span class="http patch">PATCH</span>
+              <div><strong>Atualizar</strong></div>
+              <div class="small muted">Atualização parcial</div>
+            </div>
+            <div class="method-card fragment fade-in" data-fragment-index="5">
+              <span class="http delete">DELETE</span>
+              <div><strong>Remover</strong></div>
+              <div class="small muted">Exclui recurso</div>
+            </div>
+            <div class="method-card fragment fade-in" data-fragment-index="6">
+              <span class="http head">HEAD</span>
+              <div><strong>Metadados</strong></div>
+              <div class="small muted">Sem corpo na resposta</div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <span class="tag activity">Subsessão 2.3 - Atividade 1</span>
+          <h2>Atividade 1: Implementar por Método</h2>
+          <p>Base inicial com <strong>POST já criado</strong>:</p>
+          <pre><code class="language-javascript" data-trim>
+let tarefas = [{ id: 1, titulo: 'Estudar HTTP' }];
+
+app.post('/tarefas', (req, res) => {
+  const nova = { id: Date.now(), titulo: req.body.titulo };
+  tarefas.push(nova);
+  res.status(201).json(nova);
+});
+          </code></pre>
+          <div class="box activity">
+            <strong>Passos:</strong><br>
+            1) Implementar <code>GET /tarefas</code><br>
+            2) Implementar <code>DELETE /tarefas/:id</code><br>
+            3) Testar no Postman (VSCode)
+          </div>
+        </section>
+      </section>
+
+      <section>
+        <section class="title-center">
+          <h2>Sessão 3</h2>
+          <h3>Corpo da Requisição e Parâmetros</h3>
+        </section>
+
+        <section>
+          <span class="tag">Subsessão 3.1</span>
+          <h2>Três Fontes de Dados na Requisição</h2>
+          <div class="grid-3">
+            <div class="method-card fragment fade-in" data-fragment-index="1">
+              <span class="http get">req.params</span>
+              <div><strong>Parâmetros de rota</strong></div>
+              <div class="small muted">Ex.: <code>/tarefas/:id</code></div>
+            </div>
+            <div class="method-card fragment fade-in" data-fragment-index="2">
+              <span class="http head">req.query</span>
+              <div><strong>Parâmetros de consulta</strong></div>
+              <div class="small muted">Ex.: <code>?status=aberta</code></div>
+            </div>
+            <div class="method-card fragment fade-in" data-fragment-index="3">
+              <span class="http post">req.body</span>
+              <div><strong>Corpo da requisição</strong></div>
+              <div class="small muted">Ex.: JSON no POST/PUT/PATCH</div>
+            </div>
+          </div>
+          <div class="box fragment fade-in" data-fragment-index="4">
+            Regra prática: <strong>identificar recurso</strong> -> <code>params</code>, <strong>filtrar</strong> -> <code>query</code>, <strong>enviar dados</strong> -> <code>body</code>.
+          </div>
+        </section>
+
+        <section>
+          <span class="tag">Subsessão 3.2</span>
+          <h2>Exemplos Gradativos</h2>
+          <pre class="fragment fade-in" data-fragment-index="1"><code class="language-javascript" data-trim>
+// 1) params
+app.get('/tarefas/:id', (req, res) => {
+  const id = Number(req.params.id);
+});
+          </code></pre>
+          <pre class="fragment fade-in" data-fragment-index="2"><code class="language-javascript" data-trim>
+// 2) query
+app.get('/tarefas', (req, res) => {
+  const status = req.query.status; // /tarefas?status=aberta
+});
+          </code></pre>
+          <pre class="fragment fade-in" data-fragment-index="3"><code class="language-javascript" data-trim>
+// 3) body
+app.post('/tarefas', (req, res) => {
+  const { titulo } = req.body;
+});
+          </code></pre>
+        </section>
+
+        <section>
+          <span class="tag activity">Subsessão 3.3 - Atividade 1</span>
+          <h2>Atividade: Rota com params e query</h2>
+          <div class="box activity fragment fade-in" data-fragment-index="1">
+            Implemente <code>GET /tarefas/:id</code> usando <code>req.params.id</code>.
+          </div>
+          <div class="box activity fragment fade-in" data-fragment-index="2">
+            Implemente filtro em <code>GET /tarefas?status=aberta</code> usando <code>req.query.status</code>.
+          </div>
+          <pre class="fragment fade-in" data-fragment-index="3"><code class="language-text" data-trim>
+Postman (VSCode):
+1) GET http://localhost:3000/tarefas/1
+2) GET http://localhost:3000/tarefas?status=aberta
+          </code></pre>
+        </section>
+
+        <section>
+          <span class="tag activity">Subsessão 3.4 - Atividade 2</span>
+          <h2>Atividade: POST com body + validação</h2>
+          <pre class="fragment fade-in" data-fragment-index="1"><code class="language-javascript" data-trim>
+app.post('/tarefas', (req, res) => {
+  const { titulo, status } = req.body;
+
+  if (!titulo) {
+    return res.status(400).json({ erro: 'Campo título obrigatório' });
+  }
+
+  const nova = { id: Date.now(), titulo, status: status || 'aberta' };
+  tarefas.push(nova);
+  return res.status(201).json(nova);
+});
+          </code></pre>
+          <pre class="fragment fade-in" data-fragment-index="2"><code class="language-text" data-trim>
+Postman (VSCode) - Body JSON:
+{
+  "titulo": "Estudar req.body",
+  "status": "aberta"
+}
+          </code></pre>
+          <div class="box fragment fade-in" data-fragment-index="3">
+            Resultado esperado: body válido -> <strong>201</strong>, body sem título -> <strong>400</strong>.
+          </div>
+        </section>
+      </section>
+
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/notes/notes.js"></script>
+  <script>
+    Reveal.initialize({
+      hash: true,
+      slideNumber: true,
+      transition: 'slide',
+      plugins: [ RevealHighlight, RevealNotes ]
+    });
+  </script>
+</body>
+</html>
