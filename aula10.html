@@ -608,8 +608,8 @@ app.listen(3000, () => {
           <pre><code class="language-json" data-trim>
             import express from "express";
             let notas  = [
-              { "id": 1, "titulo": "Estudar módulos", "concluida": false },
-              { "id": 2, "titulo": "Criar API", "concluida": true }
+              { "id": 1, "titulo": "Estudar módulos", "conteudo": "Meu texto de exemplo para o conteúdo" },
+              { "id": 2, "titulo": "Criar API", "conteudo": "Meu texto de exemplo para o conteúdo" }
             ]
             const app = express();
             app.use(express.json());
@@ -817,6 +817,682 @@ app.listen(3000);</code></pre>
 
 
 </section>
+
+<!-- 
+      <section>
+      <section class="title-center chapter">
+        <span class="chapter-number">3</span>
+        <h2>Implementação guiada</h2>
+        <h3>Gerar, guardar, validar e usar o token</h3>
+      </section>
+
+      <section>
+        <span class="eyebrow token">Modelo mental</span>
+        <h2>A sessão é uma consulta por token</h2>
+        <div class="flow">
+          <div class="flow-node purple">
+            <strong>token recebido</strong><br>
+            <code>8f2a...</code>
+          </div>
+          <div class="arrow">→</div>
+          <div class="flow-node gold">
+            <strong>Map.get(token)</strong><br>
+            <span class="small">procura a sessão</span>
+          </div>
+          <div class="arrow">→</div>
+          <div class="flow-node green">
+            <strong>sessão encontrada</strong><br>
+            <code>{ usuarioId: 7 }</code>
+          </div>
+        </div>
+        <div class="grid-3">
+          <div class="card"><strong>Chave</strong><br><code>8f2a...</code></div>
+          <div class="card"><strong>Usuário</strong><br><code>7</code></div>
+          <div class="card"><strong>Expira</strong><br><code>10:30</code></div>
+        </div>
+        <div class="box">Se a chave não existe ou expirou, a API não conhece aquele usuário.</div>
+      </section>
+
+      <section>
+        <span class="eyebrow token">Passo 1</span>
+        <h2>Crie o sessionRepository</h2>
+        <div class="steps six">
+          <span class="active">1. sessões</span><span>2. usuários</span><span>3. token</span><span>4. service</span><span>5. controller</span><span>6. middleware</span>
+        </div>
+        <pre><code class="language-javascript" data-trim>
+// repositories/sessionRepository.js
+const sessoes = new Map();
+
+export function salvar(token, sessao) {
+  sessoes.set(token, sessao);
+}
+
+export function buscar(token) {
+  return sessoes.get(token);
+}
+
+export function remover(token) {
+  return sessoes.delete(token);
+}
+        </code></pre>
+        <div class="box warning">O repository esconde o <code>Map</code>. Depois, ele poderá ser substituído por banco ou cache sem alterar os controllers.</div>
+      </section>
+
+      <section>
+        <span class="eyebrow token">Passo 2</span>
+        <h2>Crie o usuarioRepository</h2>
+        <div class="steps six">
+          <span class="done">1. sessões</span><span class="active">2. usuários</span><span>3. token</span><span>4. service</span><span>5. controller</span><span>6. middleware</span>
+        </div>
+        <pre><code class="language-javascript" data-trim>
+// repositories/usuarioRepository.js
+const usuarios = [
+  { id: 7, email: "ana@ufc.br", senha: "123456" }
+];
+
+export function buscarPorCredenciais(email, senha) {
+  return usuarios.find((usuario) =>
+    usuario.email === email && usuario.senha === senha
+  );
+}
+        </code></pre>
+        <div class="flow">
+          <div class="flow-node">authService</div>
+          <div class="arrow">→</div>
+          <div class="flow-node green">usuarioRepository</div>
+          <div class="arrow">→</div>
+          <div class="flow-node gold">array hoje<br><span class="small">banco depois</span></div>
+        </div>
+        <div class="box warning">A senha em texto puro é apenas uma simplificação didática. Em aplicações reais, compare hashes.</div>
+      </section>
+
+      <section>
+        <span class="eyebrow token">Passo 3</span>
+        <h2>Gere um token imprevisível</h2>
+        <div class="steps six">
+          <span class="done">1. sessões</span><span class="done">2. usuários</span><span class="active">3. token</span><span>4. service</span><span>5. controller</span><span>6. middleware</span>
+        </div>
+        <pre><code class="language-javascript" data-trim>
+// services/authService.js
+import { randomBytes } from "node:crypto";
+
+function gerarToken() {
+  return randomBytes(32).toString("hex");
+}
+
+function calcularExpiracao() {
+  const TRINTA_MINUTOS = 30 * 60 * 1000;
+  return Date.now() + TRINTA_MINUTOS;
+}
+        </code></pre>
+        <div class="box token"><code>randomBytes()</code> produz dados pseudoaleatórios criptograficamente fortes. <code>Math.random()</code> não é apropriado para tokens.</div>
+      </section>
+
+      <section>
+        <span class="eyebrow token">Passo 4</span>
+        <h2>Crie a sessão no service</h2>
+        <div class="steps six">
+          <span class="done">1. sessões</span><span class="done">2. usuários</span><span class="done">3. token</span><span class="active">4. service</span><span>5. controller</span><span>6. middleware</span>
+        </div>
+        <pre><code class="language-javascript" data-trim>
+import * as usuarios
+  from "../repositories/usuarioRepository.js";
+import * as sessoes
+  from "../repositories/sessionRepository.js";
+
+export function login(email, senha) {
+  const usuario = usuarios.buscarPorCredenciais(email, senha);
+
+  if (!usuario) return null;
+
+  const token = gerarToken();
+  const expiraEm = calcularExpiracao();
+
+  sessoes.salvar(token, { usuarioId: usuario.id, expiraEm });
+  return { token, expiraEm };
+}
+        </code></pre>
+      </section>
+
+      <section>
+        <span class="eyebrow token">Passo 5</span>
+        <h2>Responda ao login no controller</h2>
+        <div class="steps six">
+          <span class="done">1. sessões</span><span class="done">2. usuários</span><span class="done">3. token</span><span class="done">4. service</span><span class="active">5. controller</span><span>6. middleware</span>
+        </div>
+        <pre><code class="language-javascript" data-trim>
+// controllers/authController.js
+import * as authService from "../services/authService.js";
+
+export function login(req, res) {
+  const { email, senha } = req.body;
+
+  if (!email || !senha) {
+    return res.status(400).json({ erro: "Email e senha obrigatórios" });
+  }
+
+  const sessao = authService.login(email, senha);
+
+  return sessao
+    ? res.json(sessao)
+    : res.status(401).json({ erro: "Credenciais inválidas" });
+}
+        </code></pre>
+      </section>
+
+      <section>
+        <span class="eyebrow token">Checkpoint 2</span>
+        <h2>O login público já funciona</h2>
+        <div class="grid-2">
+          <div>
+            <h3>Requisição</h3>
+            <pre><code class="language-json" data-trim>
+POST /auth/login
+
+{
+  "email": "ana@ufc.br",
+  "senha": "123456"
+}
+            </code></pre>
+          </div>
+          <div>
+            <h3>Resposta</h3>
+            <pre><code class="language-json" data-trim>
+200 OK
+
+{
+  "token": "8f2a...",
+  "expiraEm": 179...
+}
+            </code></pre>
+          </div>
+        </div>
+        <div class="box activity">Ainda não protegemos nenhuma rota. Primeiro confirmamos que a emissão do token funciona.</div>
+      </section>
+
+      <section>
+        <span class="eyebrow token">HTTP</span>
+        <h2>Enviando o bearer token</h2>
+        <pre><code class="language-http" data-trim>
+GET /perfil HTTP/1.1
+Host: localhost:3000
+Authorization: Bearer 8f2a7c...91cd
+        </code></pre>
+        <div class="grid-2">
+          <div class="card green">
+            <h3>Use</h3>
+            <p>Header <code>Authorization</code> com esquema <code>Bearer</code>.</p>
+          </div>
+          <div class="card red">
+            <h3>Evite</h3>
+            <p>Token na URL: <code>/perfil?token=...</code></p>
+          </div>
+        </div>
+        <div class="box warning">URLs podem aparecer em histórico, logs e ferramentas de monitoramento.</div>
+      </section>
+
+      <section>
+        <span class="eyebrow token">Passo 6</span>
+        <h2>Extraia o token no middleware</h2>
+        <div class="steps six">
+          <span class="done">1. sessões</span><span class="done">2. usuários</span><span class="done">3. token</span><span class="done">4. service</span><span class="done">5. controller</span><span class="active">6. middleware</span>
+        </div>
+        <pre><code class="language-javascript" data-trim>
+// middlewares/autenticar.js
+import * as sessoes
+  from "../repositories/sessionRepository.js";
+
+export function autenticar(req, res, next) {
+  const authorization = req.header("authorization") ?? "";
+  const [esquema, token] = authorization.split(" ");
+
+  if (esquema !== "Bearer" || !token) {
+    return res.status(401).json({ erro: "Token ausente" });
+  }
+
+  const sessao = sessoes.buscar(token);
+  // A validação continua no próximo slide.
+}
+        </code></pre>
+      </section>
+
+      <section>
+        <span class="eyebrow token">Middleware</span>
+        <h2>Validando sessão e expiração</h2>
+        <pre><code class="language-javascript" data-trim>
+if (!sessao) {
+  return res.status(401).json({ erro: "Token inválido" });
+}
+
+if (Date.now() >= sessao.expiraEm) {
+  sessoes.remover(token);
+  return res.status(401).json({ erro: "Token expirado" });
+}
+
+req.usuarioId = sessao.usuarioId;
+req.token = token;
+return next();
+        </code></pre>
+        <div class="box">O middleware transforma um token válido em contexto confiável para os próximos handlers.</div>
+      </section>
+
+      <section>
+        <span class="eyebrow token">Rotas</span>
+        <h2>Públicas e protegidas</h2>
+        <div class="route-table">
+          <span class="badge post">POST</span><code>/auth/login</code><span><span class="badge public">pública</span> cria sessão</span>
+          <span class="badge get">GET</span><code>/tarefas</code><span><span class="badge private">protegida</span> lista tarefas</span>
+          <span class="badge post">POST</span><code>/tarefas</code><span><span class="badge private">protegida</span> cria tarefa</span>
+          <span class="badge get">GET</span><code>/perfil</code><span><span class="badge private">protegida</span> mostra usuário</span>
+          <span class="badge delete">POST</span><code>/auth/logout</code><span><span class="badge private">protegida</span> revoga sessão</span>
+        </div>
+        <div class="box">A rota de login precisa ser pública; as demais recebem o middleware <code>autenticar</code>.</div>
+      </section>
+
+      <section>
+        <span class="eyebrow token">Router</span>
+        <h2>Aplicando o middleware</h2>
+        <pre><code class="language-javascript" data-trim>
+// routes/tarefaRoutes.js
+import { Router } from "express";
+import { autenticar } from "../middlewares/autenticar.js";
+import {
+  listar,
+  criar
+} from "../controllers/tarefaController.js";
+
+const router = Router();
+
+router.use(autenticar);
+router.get("/", listar);
+router.post("/", criar);
+
+export default router;
+        </code></pre>
+        <div class="box token"><code>router.use(autenticar)</code> protege todas as rotas declaradas depois dele.</div>
+      </section>
+
+      <section>
+        <span class="eyebrow token">Contexto</span>
+        <h2>Usando o usuário autenticado</h2>
+        <pre><code class="language-javascript" data-trim>
+export function criar(req, res) {
+  const { titulo } = req.body;
+
+  if (!titulo?.trim()) {
+    return res.status(400).json({ erro: "Título obrigatório" });
+  }
+
+  const tarefa = tarefaService.criar(
+    titulo,
+    req.usuarioId
+  );
+
+  return res.status(201).json(tarefa);
+}
+        </code></pre>
+        <div class="box">O cliente não escolhe <code>usuarioId</code>. Ele vem da sessão validada pelo middleware.</div>
+      </section>
+
+      <section>
+        <span class="eyebrow activity">Atividade 2</span>
+        <h2>Proteja a API</h2>
+        <ol>
+          <li>Crie o <code>sessionRepository</code> usando <code>Map</code>.</li>
+          <li>Implemente <code>POST /auth/login</code>.</li>
+          <li>Gere um token aleatório com expiração de 30 minutos.</li>
+          <li>Crie o middleware <code>autenticar</code>.</li>
+          <li>Proteja as rotas de tarefas.</li>
+        </ol>
+        <div class="box activity">Teste três casos: sem token, token inválido e token válido.</div>
+      </section>
+
+      </section>
+
+      <section>
+      <section class="title-center chapter">
+        <span class="chapter-number">4</span>
+        <h2>Ciclo de vida</h2>
+        <h3>Testar, expirar, revogar e autorizar</h3>
+      </section>
+
+      <section>
+        <span class="eyebrow">Teste</span>
+        <h2>1. Faça login</h2>
+        <pre><code class="language-bash" data-trim>
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"ana@ufc.br","senha":"123456"}'
+        </code></pre>
+        <p>Resposta esperada:</p>
+        <pre><code class="language-json" data-trim>
+{
+  "token": "8f2a7c...91cd",
+  "expiraEm": 179...
+}
+        </code></pre>
+        <div class="box">Copie o token retornado para a próxima requisição.</div>
+      </section>
+
+      <section>
+        <span class="eyebrow">Teste</span>
+        <h2>2. Acesse uma rota protegida</h2>
+        <pre><code class="language-bash" data-trim>
+curl http://localhost:3000/tarefas \
+  -H "Authorization: Bearer 8f2a7c...91cd"
+        </code></pre>
+        <div class="grid-2">
+          <div class="card green">
+            <h3>Token válido</h3>
+            <p><code>200 OK</code></p>
+            <p>O controlador recebe <code>req.usuarioId</code>.</p>
+          </div>
+          <div class="card red">
+            <h3>Token inválido</h3>
+            <p><code>401 Unauthorized</code></p>
+            <p>A rota não é executada.</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <span class="eyebrow token">Logout</span>
+        <h2>Revogando a sessão</h2>
+        <pre><code class="language-javascript" data-trim>
+// services/authService.js
+export function logout(token) {
+  return sessoes.remover(token);
+}
+        </code></pre>
+        <pre><code class="language-javascript" data-trim>
+// controllers/authController.js
+export function logout(req, res) {
+  authService.logout(req.token);
+  return res.sendStatus(204);
+}
+        </code></pre>
+        <div class="box token">Depois do logout, o mesmo token deixa de existir no repository e não autentica novas requisições.</div>
+      </section>
+
+      <section>
+        <span class="eyebrow token">Expiração</span>
+        <h2>Por que o token deve expirar?</h2>
+        <div class="grid-3">
+          <div class="card red">
+            <h3>Vazamento</h3>
+            <p>Um token eterno amplia o tempo de uso indevido.</p>
+          </div>
+          <div class="card gold">
+            <h3>Limite</h3>
+            <p>Expiração reduz a janela de exposição.</p>
+          </div>
+          <div class="card green">
+            <h3>Renovação</h3>
+            <p>Uma nova autenticação cria outra sessão.</p>
+          </div>
+        </div>
+        <div class="box">Sessões expiradas devem ser rejeitadas e removidas periodicamente do armazenamento.</div>
+      </section>
+
+      <section>
+        <span class="eyebrow">HTTP</span>
+        <h2>401 ou 403?</h2>
+        <div class="grid-2">
+          <div class="card purple">
+            <h3>401 Unauthorized</h3>
+            <p>Não há autenticação válida.</p>
+            <ul>
+              <li>token ausente</li>
+              <li>token inválido</li>
+              <li>token expirado</li>
+            </ul>
+          </div>
+          <div class="card gold">
+            <h3>403 Forbidden</h3>
+            <p>O usuário foi autenticado, mas não possui permissão.</p>
+            <ul>
+              <li>papel insuficiente</li>
+              <li>recurso de outro usuário</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <span class="eyebrow">Autorização</span>
+        <h2>O dono do recurso</h2>
+        <pre><code class="language-javascript" data-trim>
+export function remover(id, usuarioId) {
+  const indice = tarefas.findIndex((tarefa) =>
+    tarefa.id === id && tarefa.usuarioId === usuarioId
+  );
+
+  if (indice === -1) return false;
+
+  tarefas.splice(indice, 1);
+  return true;
+}
+        </code></pre>
+        <div class="box warning">Estar autenticado não significa poder alterar qualquer recurso. A regra também verifica o proprietário.</div>
+      </section>
+
+      </section>
+
+      <section>
+      <section class="title-center chapter">
+        <span class="chapter-number">5</span>
+        <h2>Segurança e formatos</h2>
+        <h3>Boas práticas, aplicativo móvel e JWT</h3>
+      </section>
+
+      <section>
+        <span class="eyebrow security">Segurança</span>
+        <h2>Regras essenciais para bearer tokens</h2>
+        <ul class="checklist">
+          <li>Use HTTPS durante todo o transporte.</li>
+          <li>Gere tokens longos e imprevisíveis.</li>
+          <li>Defina expiração curta e permita revogação.</li>
+          <li>Envie o token no header <code>Authorization</code>.</li>
+          <li>Não registre tokens completos em logs.</li>
+          <li>Não inclua tokens em URLs.</li>
+          <li>Não mantenha segredos fixos no código versionado.</li>
+        </ul>
+      </section>
+
+      <section>
+        <span class="eyebrow security">Aplicativo móvel</span>
+        <h2>Onde o cliente guarda o token?</h2>
+        <div class="grid-2">
+          <div class="card green">
+            <h3>Prefira</h3>
+            <p>Armazenamento seguro oferecido pelo sistema operacional para credenciais.</p>
+          </div>
+          <div class="card red">
+            <h3>Evite</h3>
+            <p>Texto puro, logs, repositório, parâmetros de URL ou estado global exposto.</p>
+          </div>
+        </div>
+        <div class="box">Ao sair da conta, apague o token local e solicite a revogação ao servidor.</div>
+      </section>
+
+      <section>
+        <span class="eyebrow token">Comparação</span>
+        <h2>Token opaco e JWT não são sinônimos</h2>
+        <div class="grid-2">
+          <div class="card purple">
+            <h3>Token opaco</h3>
+            <ul>
+              <li>sequência sem significado para o cliente</li>
+              <li>sessão consultada no servidor</li>
+              <li>revogação direta</li>
+            </ul>
+          </div>
+          <div class="card gold">
+            <h3>JWT</h3>
+            <ul>
+              <li>carrega claims estruturadas</li>
+              <li>integridade protegida por assinatura ou MAC</li>
+              <li>validação exige regras explícitas</li>
+            </ul>
+          </div>
+        </div>
+        <div class="box warning">JWT normalmente é assinado, não necessariamente criptografado. Seu conteúdo pode ser legível.</div>
+      </section>
+
+      <section>
+        <span class="eyebrow token">JWT</span>
+        <h2>Anatomia conceitual</h2>
+        <div class="token-shape">
+          <div><strong>Header</strong><br><span class="small">algoritmo e tipo</span></div>
+          <div><strong>Payload</strong><br><span class="small">claims</span></div>
+          <div><strong>Assinatura</strong><br><span class="small">integridade</span></div>
+        </div>
+        <pre><code class="language-json" data-trim>
+{
+  "sub": "7",
+  "iss": "api-aula",
+  "aud": "app-mobile",
+  "iat": 179...,
+  "exp": 179...
+}
+        </code></pre>
+        <div class="box">Claims comuns: sujeito, emissor, audiência, emissão e expiração.</div>
+      </section>
+
+      <section>
+        <span class="eyebrow activity">Atividade 3</span>
+        <h2>Analise as falhas</h2>
+        <p>Explique o problema e proponha uma correção:</p>
+        <ol>
+          <li>Token gerado com <code>Math.random()</code>.</li>
+          <li>Rota protegida recebe <code>?token=abc</code>.</li>
+          <li>Token sem data de expiração.</li>
+          <li>Middleware valida o token depois do controlador.</li>
+          <li>Cliente envia <code>usuarioId</code> no body para escolher o dono.</li>
+          <li>Logout apaga o token no app, mas não o revoga na API.</li>
+        </ol>
+      </section>
+
+      </section>
+
+      <section>
+      <section class="title-center chapter">
+        <span class="chapter-number">6</span>
+        <h2>Integração</h2>
+        <h3>Juntando arquitetura, sessão e autorização</h3>
+      </section>
+
+      <section>
+        <span class="eyebrow activity">Desafio integrador</span>
+        <h2>API modular com sessão</h2>
+        <ul>
+          <li><code>POST /auth/login</code> cria sessão por 30 minutos.</li>
+          <li><code>POST /auth/logout</code> revoga o token atual.</li>
+          <li>CRUD de tarefas protegido por middleware.</li>
+          <li>Cada tarefa pertence ao usuário autenticado.</li>
+          <li>Usuários acessam apenas as próprias tarefas.</li>
+          <li>Rotas, controladores, serviços e repositories separados.</li>
+        </ul>
+        <div class="box activity">Teste sucessos, validações, token ausente, token expirado e acesso a recurso de outro usuário.</div>
+      </section>
+
+      <section>
+        <span class="eyebrow">Roteiro de implementação</span>
+        <h2>Construa de dentro para fora</h2>
+        <div class="flow">
+          <div class="flow-node green">1. repositories</div>
+          <div class="arrow">→</div>
+          <div class="flow-node gold">2. services</div>
+          <div class="arrow">→</div>
+          <div class="flow-node">3. controllers</div>
+          <div class="arrow">→</div>
+          <div class="flow-node">4. routes</div>
+          <div class="arrow">→</div>
+          <div class="flow-node purple">5. testes</div>
+        </div>
+        <ol>
+          <li>Faça o login funcionar.</li>
+          <li>Valide o token em uma única rota.</li>
+          <li>Proteja o roteador inteiro.</li>
+          <li>Acrescente logout e autorização por proprietário.</li>
+        </ol>
+      </section>
+
+      <section>
+        <span class="eyebrow">Depuração</span>
+        <h2>Erros frequentes</h2>
+        <div class="grid-2">
+          <div class="card red">
+            <h3>Sempre retorna 401</h3>
+            <p>Confira espaço, esquema <code>Bearer</code>, token copiado e expiração.</p>
+          </div>
+          <div class="card red">
+            <h3>req.usuarioId ausente</h3>
+            <p>O middleware não atribuiu o valor ou não chamou <code>next()</code>.</p>
+          </div>
+          <div class="card red">
+            <h3>Login funciona só até reiniciar</h3>
+            <p>O <code>Map</code> vive apenas na memória do processo.</p>
+          </div>
+          <div class="card red">
+            <h3>Import não encontrado</h3>
+            <p>Verifique caminho relativo, extensão <code>.js</code> e <code>type: module</code>.</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <span class="eyebrow">Checklist</span>
+        <h2>Antes de considerar pronto</h2>
+        <ul class="checklist">
+          <li>O serviço não conhece Express.</li>
+          <li>O token é gerado com fonte criptograficamente forte.</li>
+          <li>A sessão possui expiração.</li>
+          <li>Rotas protegidas usam o middleware antes do controlador.</li>
+          <li>O usuário vem da sessão, não do body.</li>
+          <li>Logout revoga a sessão no servidor.</li>
+          <li>401 e 403 são usados de forma coerente.</li>
+        </ul>
+      </section>
+
+      <section>
+        <span class="eyebrow">Síntese</span>
+        <h2>Como as peças se conectam</h2>
+        <div class="flow">
+          <div class="flow-node">login</div>
+          <div class="arrow">→</div>
+          <div class="flow-node purple">token</div>
+          <div class="arrow">→</div>
+          <div class="flow-node gold">middleware</div>
+          <div class="arrow">→</div>
+          <div class="flow-node">controller</div>
+          <div class="arrow">→</div>
+          <div class="flow-node green">service</div>
+        </div>
+        <div class="box">
+          Modularização organiza responsabilidades; o token identifica a sessão; o middleware transforma autenticação em contexto para a regra de negócio.
+        </div>
+      </section>
+
+      <section>
+        <span class="eyebrow">Referências</span>
+        <h2>Para continuar estudando</h2>
+        <ul>
+          <li><a href="https://nodejs.org/api/crypto.html#cryptorandombytessize-callback">Node.js — crypto.randomBytes()</a></li>
+          <li><a href="https://datatracker.ietf.org/doc/html/rfc6750">IETF RFC 6750 — Bearer Token Usage</a></li>
+          <li><a href="https://datatracker.ietf.org/doc/html/rfc7519">IETF RFC 7519 — JSON Web Token</a></li>
+          <li><a href="https://expressjs.com/en/guide/using-middleware.html">Express — Using middleware</a></li>
+          <li><a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Authorization">MDN — Authorization header</a></li>
+        </ul>
+      </section>
+
+      <section class="center">
+        <h2>Fim da aula</h2>
+        <p>Uma API organizada sabe onde cada responsabilidade mora.</p>
+        <p class="muted">Uma API protegida também sabe quem está fazendo cada requisição.</p>
+      </section>
+
+      </section> -->
 
     </div>
   </div>
