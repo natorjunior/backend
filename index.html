@@ -450,7 +450,7 @@ app.listen(3000, () => {
 let tarefas = [{ id: 1, titulo: 'Estudar HTTP' }];
 
 app.post('/tarefas', (req, res) => {
-  const nova = { id: Date.now(), titulo: req.body.titulo };
+  const nova = { id: Date.now(), titulo: "um atexto qualquer" };
   tarefas.push(nova);
   res.status(201).json(nova);
 });
@@ -458,7 +458,7 @@ app.post('/tarefas', (req, res) => {
           <div class="box activity">
             <strong>Passos:</strong><br>
             1) Implementar <code>GET /tarefas</code><br>
-            2) Implementar <code>DELETE /tarefas/:id</code><br>
+            2) Implementar <code>DELETE /tarefas/:id (pesquisar sobre params no express)</code><br>
             3) Testar no Postman (VSCode)
           </div>
         </section>
